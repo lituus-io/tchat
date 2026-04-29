@@ -1,0 +1,262 @@
+//! First-run setup wizard.
+//!
+//! Detects when no platforms are configured and walks the user through
+//! an interactive setup flow before launching the TUI.
+//!
+//! ```text
+//!   ╭─────────────────────────────────────╮
+//!   │  tchat — first-run setup            │
+//!   ╰─────────────────────────────────────╯
+//!
+//!   Welcome! Let's connect your chat accounts.
+//!
+//!   Which platform? [1] Google Chat  [2] Slack (coming soon)
+//!   > 1
+//!
+//!   Google account email:
+//!   > you@example.com
+//!
+//!   ✓ Config saved to ~/.config/tchat/config.toml
+//!   Starting tchat...
+//! ```
+
+use std::io::{self, BufRead, Write};
+use std::path::PathBuf;
+
+use crate::config::{Config, GeneralConfig, PlatformConfig, PlatformKind, ThemeConfig};
+
+/// Check if setup is needed and run the wizard if so.
+///
+/// Returns the (possibly updated) config. If the user's config already
+/// has platforms configured, this is a no-op.
+pub fn ensure_configured(config: Config) -> Config {
+    if !config.platforms.is_empty() {
+        return config;
+    }
+
+    // No platforms configured — run setup
+    eprintln!();
+    print_header();
+    eprintln!();
+    eprintln!("  Welcome! Let's connect your first chat account.");
+    eprintln!();
+
+    let platform = prompt_platform();
+    let account = prompt_account(&platform);
+
+    let platform_config = PlatformConfig {
+        kind: platform,
+        account: Some(account.clone()),
+        client_id: None,
+        client_secret: None,
+    };
+
+    let new_config = Config {
+        general: GeneralConfig::default(),
+        platforms: vec![platform_config],
+        theme: ThemeConfig::default(),
+    };
+
+    // Write config to disk
+    match write_config(&new_config) {
+        Ok(path) => {
+            eprintln!();
+            eprintln!("  \x1b[32m✓\x1b[0m Config saved to {}", path.display());
+        }
+        Err(e) => {
+            eprintln!();
+            eprintln!("  \x1b[33m!\x1b[0m Could not save config: {e}");
+            eprintln!("    Continuing with in-memory config.");
+        }
+    }
+
+    eprintln!();
+    eprintln!("  Starting tchat...");
+    eprintln!();
+
+    new_config
+}
+
+fn print_header() {
+    eprintln!("  \x1b[36m╭─────────────────────────────────────╮\x1b[0m");
+    eprintln!(
+        "  \x1b[36m│\x1b[0m  \x1b[1mtchat\x1b[0m — first-run setup            \x1b[36m│\x1b[0m"
+    );
+    eprintln!("  \x1b[36m╰─────────────────────────────────────╯\x1b[0m");
+}
+
+fn prompt_platform() -> PlatformKind {
+    eprintln!("  Which platform would you like to connect?");
+    eprintln!();
+    eprintln!("    \x1b[1m[1]\x1b[0m Google Chat");
+    eprintln!("    \x1b[2m[2] Slack (coming soon)\x1b[0m");
+    eprintln!();
+
+    loop {
+        eprint!("  \x1b[36m❯\x1b[0m ");
+        io::stderr().flush().ok();
+
+        let line = read_line();
+        match line.trim() {
+            "1" | "" => return PlatformKind::GoogleChat,
+            "2" => {
+                eprintln!("    Slack support is not yet available. Selecting Google Chat.");
+                return PlatformKind::GoogleChat;
+            }
+            _ => {
+                eprintln!("    Please enter 1 or 2.");
+            }
+        }
+    }
+}
+
+fn prompt_account(platform: &PlatformKind) -> String {
+    let prompt = match platform {
+        PlatformKind::GoogleChat => "Google account email",
+        PlatformKind::Slack => "Slack workspace email",
+    };
+
+    eprintln!("  {prompt}:");
+    eprintln!();
+
+    loop {
+        eprint!("  \x1b[36m❯\x1b[0m ");
+        io::stderr().flush().ok();
+
+        let line = read_line();
+        let trimmed = line.trim();
+
+        if trimmed.contains('@') && trimmed.contains('.') {
+            return trimmed.to_owned();
+        }
+
+        if trimmed.is_empty() {
+            eprintln!("    Email cannot be empty.");
+        } else {
+            eprintln!("    That doesn't look like an email address. Try again.");
+        }
+    }
+}
+
+fn read_line() -> String {
+    let stdin = io::stdin();
+    let mut line = String::new();
+    stdin.lock().read_line(&mut line).unwrap_or(0);
+    line
+}
+
+/// Write a config to the standard config file location.
+fn write_config(config: &Config) -> Result<PathBuf, String> {
+    let dirs = directories::ProjectDirs::from("com", "tchat", "tchat")
+        .ok_or("could not determine config directory")?;
+
+    let config_dir = dirs.config_dir();
+    std::fs::create_dir_all(config_dir).map_err(|e| format!("failed to create config dir: {e}"))?;
+
+    let config_path = config_dir.join("config.toml");
+    let content = serialize_config(config);
+
+    std::fs::write(&config_path, content).map_err(|e| format!("failed to write config: {e}"))?;
+
+    Ok(config_path)
+}
+
+/// Serialize config to TOML string.
+fn serialize_config(config: &Config) -> String {
+    let mut out = String::new();
+
+    out.push_str("# tchat configuration\n");
+    out.push_str("# Generated by tchat first-run setup\n\n");
+
+    out.push_str("[general]\n");
+    out.push_str(&format!("tick_rate_ms = {}\n", config.general.tick_rate_ms));
+    out.push_str(&format!(
+        "default_layout = \"{}\"\n",
+        config.general.default_layout
+    ));
+    out.push_str(&format!("log_level = \"{}\"\n", config.general.log_level));
+    out.push('\n');
+
+    for platform in &config.platforms {
+        out.push_str("[[platform]]\n");
+        let kind_str = match platform.kind {
+            PlatformKind::GoogleChat => "google_chat",
+            PlatformKind::Slack => "slack",
+        };
+        out.push_str(&format!("kind = \"{kind_str}\"\n"));
+        if let Some(ref account) = platform.account {
+            out.push_str(&format!("account = \"{account}\"\n"));
+        }
+        out.push('\n');
+    }
+
+    out.push_str("[theme]\n");
+    out.push_str("# Customize colors (optional)\n");
+    out.push_str("# space_list_bg = \"#1e1e2e\"\n");
+    out.push_str("# active_space_fg = \"#89b4fa\"\n");
+
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serialize_config_roundtrips() {
+        let config = Config {
+            general: GeneralConfig::default(),
+            platforms: vec![PlatformConfig {
+                kind: PlatformKind::GoogleChat,
+                account: Some("user@example.com".into()),
+                client_id: None,
+                client_secret: None,
+            }],
+            theme: ThemeConfig::default(),
+        };
+
+        let toml_str = serialize_config(&config);
+        assert!(toml_str.contains("kind = \"google_chat\""));
+        assert!(toml_str.contains("account = \"user@example.com\""));
+
+        // Verify it parses back
+        let parsed: Config = toml::from_str(&toml_str).unwrap();
+        assert_eq!(parsed.platforms.len(), 1);
+        assert_eq!(parsed.platforms[0].kind, PlatformKind::GoogleChat);
+        assert_eq!(
+            parsed.platforms[0].account.as_deref(),
+            Some("user@example.com")
+        );
+    }
+
+    #[test]
+    fn serialize_config_empty_platforms() {
+        let config = Config {
+            general: GeneralConfig::default(),
+            platforms: Vec::new(),
+            theme: ThemeConfig::default(),
+        };
+
+        let toml_str = serialize_config(&config);
+        assert!(toml_str.contains("[general]"));
+        assert!(!toml_str.contains("[[platform]]"));
+    }
+
+    #[test]
+    fn ensure_configured_skips_when_platforms_exist() {
+        let config = Config {
+            general: GeneralConfig::default(),
+            platforms: vec![PlatformConfig {
+                kind: PlatformKind::GoogleChat,
+                account: Some("test@test.com".into()),
+                client_id: None,
+                client_secret: None,
+            }],
+            theme: ThemeConfig::default(),
+        };
+
+        // Should return immediately without prompting
+        let result = ensure_configured(config);
+        assert_eq!(result.platforms.len(), 1);
+    }
+}

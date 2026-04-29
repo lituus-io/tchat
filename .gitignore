@@ -1,0 +1,16 @@
+/target
+
+# Local agent / editor session state
+/.claude/
+
+# IDE / editor scratch
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local logs
+*.log
+
+# OS
+Thumbs.db
