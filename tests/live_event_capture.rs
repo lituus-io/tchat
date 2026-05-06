@@ -446,9 +446,8 @@ fn rename_space(session: &mut Session, gid: &proto::GroupId, new_name: &str) {
 fn drain(rx: &Receiver<InboundEvent>, max: Duration, obs: &mut Observed) {
     let deadline = Instant::now() + max;
     while Instant::now() < deadline {
-        match rx.recv_timeout(Duration::from_millis(300)) {
-            Ok(ev) => classify(&ev, obs),
-            Err(_) => {}
+        if let Ok(ev) = rx.recv_timeout(Duration::from_millis(300)) {
+            classify(&ev, obs)
         }
     }
 }

@@ -28,7 +28,6 @@ pub fn render<S: StoreRead>(frame: &mut Frame, area: Rect, store: &S, state: &Tu
         ConnectionStatus::Connected => ("●", "connected", theme::connection(true)),
         ConnectionStatus::Connecting => ("◌", "connecting", theme::muted()),
         ConnectionStatus::Reconnecting(n) => {
-            ("◌", "reconnecting", theme::connection(false));
             spans.push(Span::styled("◌ ", theme::connection(false)));
             spans.push(Span::styled(
                 format!("reconnecting ({n})"),

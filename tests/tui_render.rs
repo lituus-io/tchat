@@ -245,7 +245,7 @@ fn message_list_shows_sender_and_text() {
     let mut store = make_store();
     let space_id = add_space(&mut store, "chat-room");
     let sender = add_user(&mut store, "Alice");
-    add_message(&mut store, space_id, sender, "Hello world", 3600_000_000);
+    add_message(&mut store, space_id, sender, "Hello world", 3_600_000_000);
 
     let mut state = TuiState::new();
     state.active_space = Some(space_id);

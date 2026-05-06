@@ -925,11 +925,7 @@ fn dispatch_body(
         if let Some(status) = usue.user_status {
             let user_str = status.user_id.and_then(|u| u.id).unwrap_or_default();
             if !user_str.is_empty() {
-                let presence = match status
-                    .dnd_settings
-                    .and_then(|d| d.dnd_state)
-                    .map(|s| s as i32)
-                {
+                let presence = match status.dnd_settings.and_then(|d| d.dnd_state) {
                     Some(2) => crate::types::PresenceStatus::Dnd,    // DND
                     Some(1) => crate::types::PresenceStatus::Active, // AVAILABLE
                     _ => crate::types::PresenceStatus::Unknown,
@@ -971,13 +967,13 @@ fn dispatch_body(
                 })
                 .unwrap_or_default();
             if !user_str.is_empty() && !space_str.is_empty() {
-                let state = match mem_state.map(|s| s as i32) {
+                let state = match mem_state {
                     Some(2) => crate::types::MembershipState::Joined,
                     Some(1) => crate::types::MembershipState::Invited,
                     Some(3) => crate::types::MembershipState::Left,
                     _ => crate::types::MembershipState::Unknown,
                 };
-                let role = match mem_role.map(|r| r as i32) {
+                let role = match mem_role {
                     Some(2) => crate::types::MemberRole::Invitee,
                     Some(3) => crate::types::MemberRole::Member,
                     Some(4) => crate::types::MemberRole::Owner,
@@ -1115,12 +1111,12 @@ pub fn uncovered_event_types() -> Vec<i32> {
     let mut out = Vec::new();
     for i in 0..64 {
         if lo & (1u64 << i) != 0 {
-            out.push(i as i32);
+            out.push(i);
         }
     }
     for i in 0..64 {
         if hi & (1u64 << i) != 0 {
-            out.push(64 + i as i32);
+            out.push(64 + i);
         }
     }
     out

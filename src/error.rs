@@ -129,7 +129,7 @@ mod tests {
         assert!(format!("{e}").contains("configuration error"));
         assert!(format!("{e}").contains("/tmp/cfg"));
 
-        let e = AppError::Terminal(std::io::Error::new(std::io::ErrorKind::Other, "boom"));
+        let e = AppError::Terminal(std::io::Error::other("boom"));
         assert!(format!("{e}").contains("terminal error"));
         assert!(format!("{e}").contains("boom"));
 

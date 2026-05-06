@@ -95,8 +95,8 @@ fn stream_events_end_to_end() {
     let deadline = std::time::Instant::now() + Duration::from_secs(8);
     let mut got_posted_echo = false;
     while std::time::Instant::now() < deadline {
-        match event_rx.recv_timeout(Duration::from_millis(500)) {
-            Ok(event) => match event {
+        if let Ok(event) = event_rx.recv_timeout(Duration::from_millis(500)) {
+            match event {
                 InboundEvent::MessagePosted { message, .. } => {
                     received_messages.fetch_add(1, Ordering::Relaxed);
                     let t = if message.text.len() > 60 {
@@ -136,8 +136,7 @@ fn stream_events_end_to_end() {
                 _ => {
                     received_noops.fetch_add(1, Ordering::Relaxed);
                 }
-            },
-            Err(_) => {} // timeout — keep polling
+            }
         }
     }
 

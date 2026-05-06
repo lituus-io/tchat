@@ -41,24 +41,21 @@ fn tui_simulation() {
     let deadline = std::time::Instant::now() + Duration::from_secs(30);
     let mut connected = false;
     while std::time::Instant::now() < deadline {
-        match inbound_rx.recv_timeout(Duration::from_millis(500)) {
-            Ok(event) => {
-                match &event {
-                    InboundEvent::Connected { .. } => {
-                        eprintln!("  ✓ Connected");
-                        connected = true;
-                    }
-                    InboundEvent::WorldSync { spaces, .. } => {
-                        eprintln!("  ✓ WorldSync — {} spaces", spaces.len());
-                    }
-                    _ => {}
+        if let Ok(event) = inbound_rx.recv_timeout(Duration::from_millis(500)) {
+            match &event {
+                InboundEvent::Connected { .. } => {
+                    eprintln!("  ✓ Connected");
+                    connected = true;
                 }
-                store.ingest(event);
-                if connected {
-                    break;
+                InboundEvent::WorldSync { spaces, .. } => {
+                    eprintln!("  ✓ WorldSync — {} spaces", spaces.len());
                 }
+                _ => {}
             }
-            Err(_) => {}
+            store.ingest(event);
+            if connected {
+                break;
+            }
         }
     }
 

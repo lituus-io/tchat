@@ -45,29 +45,26 @@ fn full_stack_integration() {
     let mut connected = false;
     let mut world_synced_spaces = 0;
     while std::time::Instant::now() < deadline && !(connected && world_synced_spaces > 0) {
-        match inbound_rx.recv_timeout(Duration::from_millis(500)) {
-            Ok(event) => {
-                match &event {
-                    InboundEvent::Connected { .. } => {
-                        eprintln!("  ✓ Connected");
-                        connected = true;
-                    }
-                    InboundEvent::WorldSync { spaces, .. } => {
-                        world_synced_spaces = spaces.len();
-                        eprintln!("  ✓ WorldSync — {} spaces", spaces.len());
-                        for (i, s) in spaces.iter().take(3).enumerate() {
-                            eprintln!("      [{i}] \"{}\"", s.name);
-                        }
-                    }
-                    InboundEvent::Disconnected { reason, .. } => {
-                        eprintln!("  ✗ Disconnected: {reason:?}");
-                        break;
-                    }
-                    _ => {}
+        if let Ok(event) = inbound_rx.recv_timeout(Duration::from_millis(500)) {
+            match &event {
+                InboundEvent::Connected { .. } => {
+                    eprintln!("  ✓ Connected");
+                    connected = true;
                 }
-                store.ingest(event);
+                InboundEvent::WorldSync { spaces, .. } => {
+                    world_synced_spaces = spaces.len();
+                    eprintln!("  ✓ WorldSync — {} spaces", spaces.len());
+                    for (i, s) in spaces.iter().take(3).enumerate() {
+                        eprintln!("      [{i}] \"{}\"", s.name);
+                    }
+                }
+                InboundEvent::Disconnected { reason, .. } => {
+                    eprintln!("  ✗ Disconnected: {reason:?}");
+                    break;
+                }
+                _ => {}
             }
-            Err(_) => {}
+            store.ingest(event);
         }
     }
 
@@ -106,22 +103,19 @@ fn full_stack_integration() {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     let mut got_history = false;
     while std::time::Instant::now() < deadline {
-        match inbound_rx.recv_timeout(Duration::from_millis(500)) {
-            Ok(event) => {
-                if let InboundEvent::HistoryChunk {
-                    messages, space_id, ..
-                } = &event
-                {
-                    if *space_id == target_space {
-                        eprintln!("  ✓ HistoryChunk — {} messages", messages.len());
-                        got_history = true;
-                        store.ingest(event);
-                        break;
-                    }
+        if let Ok(event) = inbound_rx.recv_timeout(Duration::from_millis(500)) {
+            if let InboundEvent::HistoryChunk {
+                messages, space_id, ..
+            } = &event
+            {
+                if *space_id == target_space {
+                    eprintln!("  ✓ HistoryChunk — {} messages", messages.len());
+                    got_history = true;
+                    store.ingest(event);
+                    break;
                 }
-                store.ingest(event);
             }
-            Err(_) => {}
+            store.ingest(event);
         }
     }
     assert!(got_history, "never received HistoryChunk");
@@ -145,25 +139,19 @@ fn full_stack_integration() {
     let deadline = std::time::Instant::now() + Duration::from_secs(15);
     let mut got_message_posted = false;
     while std::time::Instant::now() < deadline {
-        match inbound_rx.recv_timeout(Duration::from_millis(500)) {
-            Ok(event) => {
-                match &event {
-                    InboundEvent::MessagePosted { message, .. } => {
-                        if message.space_id == target_space
-                            && message.text.contains("full-stack integration test")
-                        {
-                            eprintln!("  ✓ MessagePosted echoed: \"{}\"", message.text);
-                            got_message_posted = true;
-                        }
-                    }
-                    _ => {}
-                }
-                store.ingest(event);
-                if got_message_posted {
-                    break;
+        if let Ok(event) = inbound_rx.recv_timeout(Duration::from_millis(500)) {
+            if let InboundEvent::MessagePosted { message, .. } = &event {
+                if message.space_id == target_space
+                    && message.text.contains("full-stack integration test")
+                {
+                    eprintln!("  ✓ MessagePosted echoed: \"{}\"", message.text);
+                    got_message_posted = true;
                 }
             }
-            Err(_) => {}
+            store.ingest(event);
+            if got_message_posted {
+                break;
+            }
         }
     }
 

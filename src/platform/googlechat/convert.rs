@@ -181,7 +181,7 @@ fn proto_message_to_message(
     let reactions = proto_msg
         .reactions
         .iter()
-        .map(|r| proto_reaction_to_reaction(r))
+        .map(proto_reaction_to_reaction)
         .collect();
 
     Some(Message {

@@ -35,9 +35,8 @@ pub fn render<S: StoreRead>(frame: &mut Frame, area: Rect, store: &S, state: &Tu
 
     let mut lines: Vec<Line<'_>> = Vec::new();
     let mut current_platform: Option<PlatformId> = None;
-    let mut space_index: usize = 0;
 
-    for space in store.spaces_sorted() {
+    for (space_index, space) in store.spaces_sorted().enumerate() {
         // Platform header on change
         if current_platform != Some(space.platform) {
             if current_platform.is_some() {
@@ -105,7 +104,6 @@ pub fn render<S: StoreRead>(frame: &mut Frame, area: Rect, store: &S, state: &Tu
         };
 
         lines.push(Line::from(spans).style(line_style));
-        space_index += 1;
     }
 
     if lines.is_empty() {

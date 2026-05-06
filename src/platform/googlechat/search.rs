@@ -354,7 +354,7 @@ fn generate_uuid() -> String {
         ((a >> 32) & 0xFFFF) as u16,
         ((a >> 48) & 0xFFFF) as u16,
         (b & 0xFFFF) as u16,
-        ((b >> 16) & 0xFFFFFFFFFFFF) as u64,
+        { (b >> 16) & 0xFFFFFFFFFFFF },
     )
 }
 

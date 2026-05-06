@@ -226,9 +226,8 @@ fn run_event_loop(
 
         crossbeam::channel::select! {
             recv(inbound_rx) -> event => {
-                match event {
-                    Ok(ev) => handle_inbound(store, tui_state, ev),
-                    Err(_) => {} // Platform threads exited — keep TUI running
+                if let Ok(ev) = event {
+                    handle_inbound(store, tui_state, ev);
                 }
             }
             recv(terminal_rx) -> input => {

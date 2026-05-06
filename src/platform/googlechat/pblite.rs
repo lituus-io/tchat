@@ -693,10 +693,8 @@ fn encode_message(buf: &mut BytesMut, value: &Value) -> Result<(), PbliteError> 
 /// If the last element is a JSON object (not array, not scalar), it's treated
 /// as a sparse field map for high field numbers (e.g., field 100 for RequestHeader).
 fn split_sparse(arr: &[Value]) -> (&[Value], Option<&serde_json::Map<String, Value>>) {
-    if let Some(last) = arr.last() {
-        if let Value::Object(map) = last {
-            return (&arr[..arr.len() - 1], Some(map));
-        }
+    if let Some(Value::Object(map)) = arr.last() {
+        return (&arr[..arr.len() - 1], Some(map));
     }
     (arr, None)
 }
@@ -1689,8 +1687,8 @@ mod tests {
         let decoded = wire_to_pblite(&wire).unwrap();
         let arr = decoded.as_array().unwrap();
         assert_eq!(arr.len(), 10);
-        for i in 0..9 {
-            assert!(arr[i].is_null(), "expected null at index {i}");
+        for (i, item) in arr.iter().take(9).enumerate() {
+            assert!(item.is_null(), "expected null at index {i}");
         }
         assert_eq!(arr[9], json!("field_10"));
     }

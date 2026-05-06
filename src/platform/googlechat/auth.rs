@@ -11,7 +11,7 @@
 //! Keychain binding). Cookie values from CDP are NOT usable in raw HTTP
 //! clients. Instead, we proxy all API calls through Chrome's page context.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -644,13 +644,13 @@ pub fn authenticate(_account: Option<&str>) -> Result<Tokens, AuthError> {
 
 /// Re-authenticate with a visible Chrome window (non-headless).
 /// Called when headless mode fails due to expired SSO session.
-fn authenticate_visible(chrome_path: &PathBuf, profile_dir: &PathBuf) -> Result<Tokens, AuthError> {
+fn authenticate_visible(chrome_path: &Path, profile_dir: &Path) -> Result<Tokens, AuthError> {
     eprintln!("  Launching Chrome with visible window...");
 
     let browser = headless_chrome::Browser::new(headless_chrome::LaunchOptions {
         headless: false,
-        path: Some(chrome_path.clone()),
-        user_data_dir: Some(profile_dir.clone()),
+        path: Some(chrome_path.to_path_buf()),
+        user_data_dir: Some(profile_dir.to_path_buf()),
         idle_browser_timeout: Duration::from_secs(86400),
         args: vec![
             std::ffi::OsStr::new("--disable-gpu"),

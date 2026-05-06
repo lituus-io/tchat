@@ -50,9 +50,8 @@ pub fn render<S: StoreRead>(frame: &mut Frame, area: Rect, store: &S, state: &Tu
 
     let mut lines: Vec<Line<'_>> = Vec::new();
     let self_user = store.self_user(space_id.platform);
-    let mut msg_count = 0u32;
 
-    for msg in store.messages_in_space(space_id) {
+    for (msg_count, msg) in store.messages_in_space(space_id).enumerate() {
         if msg_count > 0 {
             lines.push(Line::raw("")); // Spacing between messages
         }
@@ -111,8 +110,6 @@ pub fn render<S: StoreRead>(frame: &mut Frame, area: Rect, store: &S, state: &Tu
             }
             lines.push(Line::from(reaction_spans));
         }
-
-        msg_count += 1;
     }
 
     // Typing indicator at bottom

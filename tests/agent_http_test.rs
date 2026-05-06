@@ -218,12 +218,10 @@ fn agent_http_end_to_end() {
     let watcher_saw = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let saw_clone = std::sync::Arc::clone(&watcher_saw);
     std::thread::spawn(move || {
-        for ev in stream.take(5) {
-            if let Ok(env) = ev {
-                if env.kind == EventKind::MessagePosted {
-                    saw_clone.store(true, std::sync::atomic::Ordering::Relaxed);
-                    break;
-                }
+        for env in stream.take(5).flatten() {
+            if env.kind == EventKind::MessagePosted {
+                saw_clone.store(true, std::sync::atomic::Ordering::Relaxed);
+                break;
             }
         }
     });
