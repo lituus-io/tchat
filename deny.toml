@@ -29,7 +29,12 @@ allow = [
     "CC0-1.0",
     "CDLA-Permissive-2.0",
 ]
-exceptions = []
+exceptions = [
+    # Build-time code generator for headless_chrome's CDP bindings.
+    # Generated bindings are MIT-licensed; the generator itself never
+    # ships in our binary.
+    { allow = ["GPL-3.0-or-later"], crate = "auto_generate_cdp" },
+]
 
 [bans]
 multiple-versions = "allow"
