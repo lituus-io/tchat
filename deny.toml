@@ -9,7 +9,14 @@ feature-depth = 1
 db-path = "$CARGO_HOME/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "warn"
-ignore = []
+ignore = [
+    # paste - no longer maintained. Transitive via ratatui; no exploitable
+    # surface, the crate is a frozen proc-macro.
+    "RUSTSEC-2024-0436",
+    # lru - IterMut Stacked Borrows unsoundness. Transitive via ratatui;
+    # we never call IterMut on the cache.
+    "RUSTSEC-2026-0002",
+]
 
 [licenses]
 unused-allowed-license = "allow"
